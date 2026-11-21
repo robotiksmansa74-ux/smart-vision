@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#101827">
+<title>Smart Vision — AI Object Detector</title>
+<style>
+:root{--bg:#0b1220;--panel:#121d2e;--panel2:#172438;--line:#26364c;--text:#eef5ff;--muted:#9eb0c7;--cyan:#43d9e6;--green:#58d69a;--orange:#ffbd69;--red:#ff7373}
+*{box-sizing:border-box}body{margin:0;background:linear-gradient(145deg,#0b1220,#101b2c 55%,#0b1220);color:var(--text);font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+header{padding:18px clamp(14px,4vw,36px);border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:12px}.logo{width:42px;height:42px;border-radius:13px;background:linear-gradient(135deg,#35d4df,#3176d9);display:grid;place-items:center;font-size:22px;color:#071321;font-weight:900}
+h1{font-size:19px;margin:0;letter-spacing:.4px}header p{margin:2px 0 0;color:var(--muted);font-size:12px}
+.status{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:12px}.dot{width:8px;height:8px;border-radius:50%;background:#77869b}.dot.on{background:var(--green);box-shadow:0 0 12px var(--green)}
+main{max-width:1440px;margin:auto;padding:18px clamp(12px,3vw,30px) 40px}
+.layout{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(290px,.9fr);gap:16px}
+.panel{background:rgba(18,29,46,.94);border:1px solid var(--line);border-radius:18px;overflow:hidden;box-shadow:0 12px 35px #0002}
+.panel-head{padding:14px 17px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:10px}
+.panel-head h2{font-size:14px;margin:0}.sub{font-size:11px;color:var(--muted)}
+.camera-wrap{position:relative;background:#050a11;aspect-ratio:16/10;min-height:240px;display:grid;place-items:center;overflow:hidden}
+video,canvas{position:absolute;width:100%;height:100%;inset:0;object-fit:contain}canvas{pointer-events:none}
+.placeholder{padding:24px;text-align:center;color:var(--muted);max-width:360px}.placeholder .camicon{font-size:44px;margin-bottom:8px}
+.controls{padding:14px 16px;display:flex;flex-wrap:wrap;align-items:center;gap:9px}
+button,select,input{font:inherit}button{border:1px solid var(--line);background:#1c2b41;color:var(--text);padding:10px 14px;border-radius:11px;cursor:pointer;font-weight:650}
+button:hover{border-color:var(--cyan)}button:disabled{opacity:.45;cursor:not-allowed}.primary{background:linear-gradient(120deg,#26c6d5,#2878ce);color:#06131f;border:0}.danger{color:#ff9b9b}.control-label{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:7px}
+select{background:#1c2b41;color:var(--text);border:1px solid var(--line);border-radius:9px;padding:8px}
+input[type=range]{width:100px;accent-color:var(--cyan)}
+.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:0 16px 16px}
+.metric{background:var(--panel2);padding:12px;border-radius:12px}.metric strong{display:block;font-size:23px}.metric span{font-size:11px;color:var(--muted)}
+.rightcol{display:flex;flex-direction:column;gap:16px}.list{padding:8px 14px;max-height:300px;overflow:auto}
+.object-row{display:flex;align-items:center;justify-content:space-between;padding:10px 2px;border-bottom:1px solid #26364c;gap:10px}.object-row:last-child{border:0}
+.object-name{font-weight:650;text-transform:capitalize}.object-meta{font-size:11px;color:var(--muted)}.count{background:#20344c;color:#8feaf0;border-radius:8px;padding:4px 8px;font-size:12px;font-weight:700}
+.empty{padding:25px 12px;text-align:center;color:var(--muted);font-size:13px}
+.settings{padding:14px 16px;display:grid;gap:12px}.setting{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:13px}.setting small{display:block;color:var(--muted)}
+.log-tools{display:flex;gap:8px;flex-wrap:wrap}.log-tools button{padding:8px 10px;font-size:12px}
+.log-list{max-height:340px;overflow:auto;padding:0 14px 10px}.log-item{padding:10px 2px;border-bottom:1px solid var(--line);display:grid;grid-template-columns:1fr auto;gap:6px}.log-item b{text-transform:capitalize}.log-item small{color:var(--muted);font-size:11px}
+footer{text-align:center;color:#7f91a8;font-size:11px;padding:22px 10px}
+.notice{margin:14px 0;padding:12px 14px;background:#17283a;border:1px solid #2d4b62;border-radius:12px;color:#b9d3e8;font-size:12px}
+@media(max-width:850px){.layout{grid-template-columns:1fr}.rightcol{display:grid;grid-template-columns:1fr 1fr}.rightcol .panel:last-child{grid-column:1/-1}}
+@media(max-width:560px){header{align-items:flex-start}.rightcol{display:flex}.camera-wrap{aspect-ratio:4/3;min-height:230px}.metrics{gap:7px;padding:0 10px 12px}.metric{padding:9px}.metric strong{font-size:19px}.controls{padding:11px}.controls button{flex:1}.setting{align-items:flex-start}}
+</style>
+</head>
+<body>
+<header>
+ <div class="brand"><div class="logo">◉</div><div><h1>SMART VISION</h1><p>AI Computer Vision · Real-time Object Detection</p></div></div>
+ <div class="status"><span id="statusDot" class="dot"></span><span id="statusText">Kamera tidak aktif</span></div>
+</header>
+<main>
+ <div class="layout">
+  <section class="panel">
+   <div class="panel-head"><div><h2>LIVE CAMERA</h2><div class="sub">Deteksi objek langsung dari kamera ponsel</div></div><span class="sub" id="fps">0 FPS</span></div>
+   <div class="camera-wrap" id="cameraWrap">
+    <video id="video" autoplay muted playsinline hidden></video><canvas id="overlay"></canvas>
+    <div class="placeholder" id="placeholder"><div class="camicon">📷</div><b>Kamera siap digunakan</b><br><span class="sub">Tekan tombol Mulai Kamera untuk mengaktifkan deteksi AI.</span></div>
+   </div>
+   <div class="controls">
+    <button class="primary" id="startBtn">▶ Mulai Kamera</button>
+    <button id="stopBtn" disabled>■ Hentikan</button>
+    <button id="switchBtn" disabled>↻ Balik Kamera</button>
+    <label class="control-label">Akurasi min. <input id="threshold" type="range" min=".25" max=".9" step=".05" value=".55"><b id="thresholdVal">55%</b></label>
+   </div>
+   <div class="metrics">
+    <div class="metric"><strong id="visibleCount">0</strong><span>Objek terlihat</span></div>
+    <div class="metric"><strong id="movingCount">0</strong><span>Objek bergerak</span></div>
+    <div class="metric"><strong id="totalCount">0</strong><span>Total catatan</span></div>
+   </div>
+  </section>
+  <aside class="rightcol">
+   <section class="panel">
+    <div class="panel-head"><div><h2>OBJEK TERDETEKSI</h2><div class="sub">Kategori yang terlihat saat ini</div></div><span class="count" id="liveBadge">0</span></div>
+    <div class="list" id="liveList"><div class="empty">Belum ada objek terdeteksi.</div></div>
+   </section>
+   <section class="panel">
+    <div class="panel-head"><div><h2>STATISTIK OBJEK</h2><div class="sub">Akumulasi hasil pengamatan</div></div></div>
+    <div class="list" id="statsList"><div class="empty">Belum ada data.</div></div>
+   </section>
+   <section class="panel">
+    <div class="panel-head"><div><h2>PENGATURAN DETEKSI</h2><div class="sub">Atur cara aplikasi mencatat objek</div></div></div>
+    <div class="settings">
+     <div class="setting"><div><b>Catat otomatis</b><small>Simpan saat objek baru terlihat</small></div><input type="checkbox" id="autoLog" checked></div>
+     <div class="setting"><div><b>Deteksi gerakan</b><small>Tandai objek yang berpindah posisi</small></div><input type="checkbox" id="motionToggle" checked></div>
+     <div class="setting"><div><b>Interval catatan</b><small>Jeda pencatatan objek yang sama</small></div><select id="logInterval"><option value="3">3 detik</option><option value="5" selected>5 detik</option><option value="10">10 detik</option><option value="30">30 detik</option></select></div>
+    </div>
+   </section>
+  </aside>
+ </div>
+ <section class="panel" style="margin-top:16px">
+  <div class="panel-head"><div><h2>RIWAYAT PENGAMATAN</h2><div class="sub">Tersimpan pada database lokal browser (IndexedDB)</div></div><div class="log-tools"><button id="exportBtn">⇩ Ekspor CSV</button><button class="danger" id="clearBtn">Hapus Riwayat</button></div></div>
+  <div class="log-list" id="logList"><div class="empty">Riwayat masih kosong.</div></div>
+ </section>
+ <div class="notice"><b>Catatan penggunaan:</b> Izinkan akses kamera saat diminta. Aplikasi harus dibuka melalui HTTPS (misalnya GitHub Pages) atau localhost. Model AI dimuat dari CDN sehingga koneksi internet diperlukan saat pertama kali digunakan. Hasil deteksi dan riwayat disimpan di perangkat ini; tidak ada video yang diunggah ke server.</div>
+</main>
+<footer>SMART VISION · TensorFlow.js + COCO-SSD · Penyimpanan lokal IndexedDB</footer>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.20.0/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js"></script>
+<script>
+(() => {
+ const $ = id => document.getElementById(id);
+ const video=$('video'), canvas=$('overlay'), ctx=canvas.getContext('2d');
+ let model=null, stream=null, running=false, facing='environment', raf=0, lastFrame=0, frameCount=0, fpsTime=0, fpsValue=0;
+ let previousTracks=[], nextTrackId=1, detections=[], db=null, logs=[], lastLogged=new Map();
+ const DB_NAME='SmartVisionDB', STORE='observations';
+ const threshold=()=>Number($('threshold').value);
+ const now=()=>new Date().toISOString();
+ const fmt=t=>new Date(t).toLocaleString('id-ID',{dateStyle:'short',timeStyle:'medium'});
+ function setStatus(text,on){$('statusText').textContent=text;$('statusDot').classList.toggle('on',on)}
+ function openDB(){
+  return new Promise((resolve,reject)=>{
+   const req=indexedDB.open(DB_NAME,1);
+   req.onupgradeneeded=()=>{const d=req.result;if(!d.objectStoreNames.contains(STORE))d.createObjectStore(STORE,{keyPath:'id',autoIncrement:true})};
+   req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);
+  });
+ }
+ function dbAll(){return new Promise((resolve,reject)=>{const r=db.transaction(STORE).objectStore(STORE).getAll();r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)})}
+ function dbAdd(item){return new Promise((resolve,reject)=>{const r=db.transaction(STORE,'readwrite').objectStore(STORE).add(item);r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)})}
+ function dbClear(){return new Promise((resolve,reject)=>{const r=db.transaction(STORE,'readwrite').objectStore(STORE).clear();r.onsuccess=resolve;r.onerror=()=>reject(r.error)})}
+ async function refreshLogs(){logs=await dbAll();$('totalCount').textContent=logs.length;renderLogs();renderStats()}
+ function renderLogs(){
+  const el=$('logList');
+  if(!logs.length){el.innerHTML='<div class="empty">Riwayat masih kosong.</div>';return}
+  el.innerHTML=logs.slice().reverse().slice(0,100).map(x=>`<div class="log-item"><div><b>${escapeHTML(x.class)}</b> <small>· ${Math.round(x.score*100)}% · ${x.moving?'Bergerak':'Diam'}</small><br><small>${fmt(x.time)}</small></div><small>#${x.id}</small></div>`).join('');
+ }
+ function renderStats(){
+  const counts={};logs.forEach(x=>counts[x.class]=(counts[x.class]||0)+1);
+  const pairs=Object.entries(counts).sort((a,b)=>b[1]-a[1]);const el=$('statsList');
+  el.innerHTML=pairs.length?pairs.slice(0,12).map(([n,c])=>`<div class="object-row"><span class="object-name">${escapeHTML(n)}</span><span class="count">${c} kali</span></div>`).join(''):'<div class="empty">Belum ada data.</div>';
+ }
+ function escapeHTML(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+ function center(b){return{x:b[0]+b[2]/2,y:b[1]+b[3]/2}}
+ function trackObjects(preds){
+  const used=new Set(), tracks=[];
+  for(const p of preds){
+   const c=center(p.bbox);let best=null,bestD=Infinity;
+   previousTracks.forEach(t=>{if(used.has(t.id)||t.class!==p.class)return;const d=Math.hypot(c.x-t.x,c.y-t.y);if(d<bestD&&d<Math.max(55,Math.min(video.videoWidth,video.videoHeight)*.16)){bestD=d;best=t}});
+   let id,moving=false;
+   if(best){id=best.id;used.add(id);moving=bestD>7}
+   else{id=nextTrackId++}
+   tracks.push({id,class:p.class,x:c.x,y:c.y,moving});
+  }
+  previousTracks=tracks;
+  return preds.map((p,i)=>({...p,...tracks[i]}));
+ }
+ function draw(preds){
+  const w=video.videoWidth,h=video.videoHeight;if(!w||!h)return;
+  if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h}
+  ctx.clearRect(0,0,w,h);
+  preds.forEach(p=>{
+   const [x,y,bw,bh]=p.bbox;const color=p.moving?'#ffbd69':'#43d9e6';
+   ctx.strokeStyle=color;ctx.lineWidth=Math.max(2,w/450);ctx.strokeRect(x,y,bw,bh);
+   const label=`${p.class} ${Math.round(p.score*100)}%${p.moving?' • MOVING':''}`;
+   ctx.font=`bold ${Math.max(13,w/55)}px system-ui`;const tw=ctx.measureText(label).width;
+   ctx.fillStyle=color;ctx.fillRect(x,y-Math.max(25,w/28),tw+12,Math.max(25,w/28));
+   ctx.fillStyle='#071321';ctx.fillText(label,x+6,y-7);
+  });
+ }
+ function renderLive(preds){
+  const counts={};preds.forEach(p=>counts[p.class]=(counts[p.class]||0)+1);
+  const entries=Object.entries(counts).sort((a,b)=>b[1]-a[1]);
+  $('liveBadge').textContent=preds.length;$('visibleCount').textContent=preds.length;
+  $('movingCount').textContent=preds.filter(p=>p.moving).length;
+  $('liveList').innerHTML=entries.length?entries.map(([n,c])=>`<div class="object-row"><span class="object-name">${escapeHTML(n)}</span><span class="count">${c}</span></div>`).join(''):'<div class="empty">Belum ada objek terdeteksi.</div>';
+ }
+ async function recordPredictions(preds){
+  if(!$('autoLog').checked)return;
+  const interval=Number($('logInterval').value)*1000, t=Date.now();
+  for(const p of preds){
+   const key=p.class;const prev=lastLogged.get(key)||0;
+   if(t-prev>=interval){
+    lastLogged.set(key,t);
+    try{await dbAdd({class:p.class,score:p.score,moving:p.moving,time:now(),trackId:p.id})}catch(e){console.warn('Gagal menyimpan catatan',e)}
+   }
+  }
+  if(t%1500<100)await refreshLogs();
+ }
+ async function loop(ts){
+  if(!running)return;
+  if(ts-lastFrame>100){
+   lastFrame=ts;
+   try{
+    const raw=await model.detect(video);
+    let preds=raw.filter(p=>p.score>=threshold()).map(p=>({...p}));
+    if(!$('motionToggle').checked){previousTracks=[];preds=preds.map(p=>({...p,id:0,moving:false}))}
+    else preds=trackObjects(preds);
+    detections=preds;draw(preds);renderLive(preds);recordPredictions(preds);
+    frameCount++;if(ts-fpsTime>=1000){fpsValue=frameCount;frameCount=0;fpsTime=ts;$('fps').textContent=fpsValue+' FPS'}
+   }catch(e){console.error(e)}
+  }
+  raf=requestAnimationFrame(loop);
+ }
+ async function start(){
+  if(running)return;
+  $('startBtn').disabled=true;setStatus('Memuat model AI…',false);
+  try{
+   if(!model){if(!window.cocoSsd)throw new Error('Library AI belum termuat. Periksa koneksi internet.');model=await cocoSsd.load({base:'lite_mobilenet_v2'});}
+   stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:facing},width:{ideal:1280},height:{ideal:720}}});
+   video.srcObject=stream;await video.play();video.hidden=false;$('placeholder').hidden=true;
+   running=true;$('stopBtn').disabled=false;$('switchBtn').disabled=false;setStatus('AI aktif · kamera berjalan',true);
+   fpsTime=performance.now();raf=requestAnimationFrame(loop);
+  }catch(e){console.error(e);setStatus('Tidak dapat mengaktifkan kamera',false);alert('Kamera/model tidak dapat dijalankan: '+e.message+'\nPastikan izin kamera diberikan dan halaman menggunakan HTTPS.')}
+  finally{$('startBtn').disabled=false}
+ }
+ function stop(){
+  running=false;cancelAnimationFrame(raf);if(stream)stream.getTracks().forEach(t=>t.stop());stream=null;video.srcObject=null;video.hidden=true;
+  ctx.clearRect(0,0,canvas.width,canvas.height);$('placeholder').hidden=false;$('stopBtn').disabled=true;$('switchBtn').disabled=true;
+  detections=[];previousTracks=[];renderLive([]);$('fps').textContent='0 FPS';setStatus('Kamera tidak aktif',false);
+ }
+ async function switchCamera(){const was=running;stop();facing=facing==='environment'?'user':'environment';if(was)await start()}
+ function exportCSV(){
+  if(!logs.length){alert('Belum ada data untuk diekspor.');return}
+  const rows=[['ID','Objek','Confidence','Status Gerakan','Waktu','Track ID'],...logs.map(x=>[x.id,x.class,x.score,x.moving?'Bergerak':'Diam',x.time,x.trackId])];
+  const csv=rows.map(r=>r.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(',')).join('\r\n');
+  const a=document.createElement('a'),url=URL.createObjectURL(new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'}));a.href=url;a.download='smart-vision-riwayat.csv';a.click();URL.revokeObjectURL(url);
+ }
+ $('startBtn').addEventListener('click',start);$('stopBtn').addEventListener('click',stop);$('switchBtn').addEventListener('click',switchCamera);
+ $('threshold').addEventListener('input',e=>$('thresholdVal').textContent=Math.round(Number(e.target.value)*100)+'%');
+ $('exportBtn').addEventListener('click',exportCSV);
+ $('clearBtn').addEventListener('click',async()=>{if(confirm('Hapus seluruh riwayat pengamatan dari perangkat ini?')){await dbClear();lastLogged.clear();await refreshLogs()}});
+ window.addEventListener('pagehide',stop);
+ (async()=>{try{if(!navigator.mediaDevices?.getUserMedia)throw new Error('Browser tidak mendukung kamera.');db=await openDB();await refreshLogs()}catch(e){alert('Inisialisasi database gagal: '+e.message)}})();
+})();
+</script>
+</body>
+</html>
